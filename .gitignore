@@ -1,0 +1,27 @@
+# Virtual Environments
+.venv/
+env/
+venv/
+
+# Caches
+__pycache__/
+*.pyc
+.mypy_cache/
+.pytest_cache/
+
+# User Media & Drafts
+*.mp4
+*.mov
+*.wav
+*.fcpxml
+temp_audio*.wav
+
+# OS Artifacts
+.DS_Store
+
+# IDEs
+.idea/
+.vscode/
+
+# Secrets
+.env

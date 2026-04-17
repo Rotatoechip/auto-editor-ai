@@ -1,4 +1,4 @@
-# AI Auto-Editor for 剪映（JianYing Pro） 🎬
+# AI Auto-Editor for 剪映（JianYing Pro）
 An automated, zero-touch video editing pipeline that precisely purges awkward pauses, filler words, and semantic slips directly into a native JianYing Pro (CapCut Chinese) timeline draft.
 
 ## Core Architecture

@@ -2,8 +2,6 @@ import string
 import json
 import os
 from typing import List, Dict, Any, Tuple
-from google import genai
-from google.genai import types
 
 FILLER_WORDS = {
     "嗯", "啊", "那个", "呃", "哎", "这", "就是",
@@ -47,6 +45,14 @@ def identify_slips_of_tongue(full_text: str) -> List[str]:
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
         print("Warning: GEMINI_API_KEY not found in environment. Skipping LLM slip identification. (Please export GEMINI_API_KEY)")
+        return []
+
+    try:
+        from google import genai
+        from google.genai import types
+    except ImportError:
+        print("Warning: google-genai package not found. Skipping LLM slip identification.")
+        print("Please run: pip install google-genai")
         return []
 
     client = genai.Client(api_key=api_key)

@@ -2,12 +2,13 @@ import sys
 from typing import List, Dict, Any
 from tqdm import tqdm
 from cli_interface import parse_arguments
-from audio_processing import extract_mono_wav, cleanup_temp_files
+from audio_processing import extract_mono_audio, cleanup_temp_files
 from nlp_processing import filter_words
 from draft_generation import generate_jianying_draft
 
 
 import os
+import json
 from openai import OpenAI
 from pydub import AudioSegment
 
@@ -17,7 +18,7 @@ def transcribe_audio(audio_path: str) -> List[Dict[str, Any]]:
     Performs dynamic 25MB chunking natively if the file is too large.
 
     Args:
-        audio_path: Path to the WAV audio file.
+        audio_path: Path to the audio file (MP3/M4A/WAV).
 
     Returns:
         A list of dictionaries containing 'word', 'start', and 'end' for each word.
@@ -60,7 +61,7 @@ def transcribe_audio(audio_path: str) -> List[Dict[str, Any]]:
                 
         # Increment exact delta offset utilizing pydub's native ms length calculation
         # to ensure the next chunk falls flawlessly into the correct sequence.
-        chunk_segment = AudioSegment.from_wav(chunk_path)
+        chunk_segment = AudioSegment.from_file(chunk_path)
         current_time_offset += len(chunk_segment) / 1000.0
         
         # Cleanup processed chunk artifact immediately
@@ -79,15 +80,32 @@ def main() -> None:
     print(f"Pause Threshold: {args.pause_threshold}s")
     print(f"Margin: {args.margin}s")
 
-    print("\nExtracting audio...")
+    print("\nPreparing audio...")
     try:
-        out_wav = extract_mono_wav(args.input_file)
-        print(f"Audio extracted successfully to: {out_wav}")
+        # Check if the input is already a lightweight audio file
+        ext = os.path.splitext(args.input_file)[1].lower()
+        is_audio = ext in [".m4a", ".mp3", ".wav", ".aac", ".flac"]
+        file_size_mb = os.path.getsize(args.input_file) / (1024 * 1024)
+        
+        # If it's already a small audio file, we might skip extraction
+        # but we still want it to be mono and 16k for best Whisper results
+        # So we'll still extract to a temp mono MP3, but it's now much faster/smaller.
+        out_audio = extract_mono_audio(args.input_file)
+        print(f"Audio processed successfully: {out_audio}")
 
         print("\nStarting transcription phase...")
-        word_data = transcribe_audio(out_wav)
+        word_data = transcribe_audio(out_audio)
         print(
             f"Transcription complete. Extracted {len(word_data)} typed words.")
+
+        if args.transcribe_only:
+            output_json = os.path.splitext(args.input_file)[0] + "_transcript.json"
+            print(f"\nTranscribe-only mode active. Saving to: {output_json}")
+            with open(output_json, "w", encoding="utf-8") as f:
+                json.dump(word_data, f, ensure_ascii=False, indent=2)
+            cleanup_temp_files(out_wav)
+            print("Done.")
+            return
 
         print("\nFiltering and generating keep segments...")
         keep_segments = filter_words(
@@ -98,13 +116,12 @@ def main() -> None:
             print(f"  Segment {idx+1}: {start:.2f}s - {end:.2f}s")
 
         print("\nGenerating Native JianYing Pro Project Draft...")
-        import os
         original_name = os.path.basename(args.input_file)
         draft_dir = generate_jianying_draft(args.input_file, keep_segments)
         print(f"Native Draft 'AI Edited: {original_name}' has been injected. Open JianYing Pro to see it in your Local Drafts.")
 
         print("\nCleaning up environment...")
-        cleanup_temp_files(out_wav)
+        cleanup_temp_files(out_audio)
         print("\nPipeline entirely completed!")
 
     except Exception as e:

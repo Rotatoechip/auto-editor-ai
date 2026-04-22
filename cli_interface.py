@@ -24,4 +24,9 @@ def parse_arguments() -> argparse.Namespace:
         default=0.4,
         help="Padding in seconds around kept segments (default: 0.6)."
     )
+    parser.add_argument(
+        "--transcribe_only",
+        action="store_true",
+        help="If set, only transcribe the video and save to a JSON file without editing."
+    )
     return parser.parse_args()
